@@ -1,0 +1,941 @@
+
+:root {
+  --bg: #f4f3f1;
+  --card: #ffffff;
+  --ink: #161a1d;
+  --mut: #6b6b6d;
+  --line: #e7e4df;
+  --brand: #9b2247;       /* guinda */
+  --brandosc: #611232;    /* guinda oscuro */
+  --brandsoft: #f6e8ec;   /* guinda muy claro */
+  --dorado: #a57f2c;
+  --crema: #e6d194;
+  --cremasoft: #faf5e6;
+  --verde: #1e5b4f;
+  --sombra: 0 1px 2px rgba(22, 26, 29, .04), 0 8px 24px rgba(22, 26, 29, .05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px 'Noto Sans', system-ui, sans-serif;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+.sub {
+  color: var(--mut);
+  font-size: 13.5px;
+}
+
+/* =========================================================
+   Logo (se usa en el menú y en el login)
+   ========================================================= */
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.marca-sello {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--brand);
+  color: var(--crema);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .06em;
+  box-shadow: inset 0 -3px 0 var(--dorado);
+}
+
+.marca div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.marca strong {
+  font-size: 16px;
+}
+
+.marca span:not(.marca-sello) {
+  font-size: 12px;
+  color: var(--mut);
+}
+
+/* =========================================================
+   Login
+   ========================================================= */
+.login {
+  min-height: 100vh;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.login-panel {
+  flex: 1 1 420px;
+  background: var(--brandosc);
+  color: #fff;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* círculos decorativos en dorado */
+.login-panel::before,
+.login-panel::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(230, 209, 148, .25);
+}
+
+.login-panel::before {
+  width: 520px;
+  height: 520px;
+  right: -200px;
+  bottom: -180px;
+}
+
+.login-panel::after {
+  width: 320px;
+  height: 320px;
+  right: -100px;
+  bottom: -80px;
+  border-color: rgba(230, 209, 148, .4);
+}
+
+.marca.claro strong {
+  color: #fff;
+}
+
+.marca.claro span:not(.marca-sello) {
+  color: var(--crema);
+}
+
+.marca.claro .marca-sello {
+  background: var(--crema);
+  color: var(--brandosc);
+  box-shadow: none;
+}
+
+.login-texto {
+  max-width: 440px;
+  position: relative;
+}
+
+.login-texto h2 {
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.login-texto p {
+  color: rgba(255, 255, 255, .78);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.login-pie {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .6);
+  border-top: 1px solid rgba(230, 209, 148, .35);
+  padding-top: 16px;
+  position: relative;
+}
+
+.login-form {
+  flex: 1 1 420px;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.lcard {
+  width: 100%;
+  max-width: 400px;
+}
+
+.lcard h1 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+/* selector Recepción / Médico */
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 26px 0 22px;
+  padding: 5px;
+  background: #ebe8e3;
+  border-radius: 12px;
+}
+
+.seg button {
+  border: 0;
+  background: none;
+  color: var(--mut);
+  border-radius: 9px;
+  padding: 10px;
+  font: 600 14px 'Noto Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.seg button.on {
+  background: #fff;
+  color: var(--brand);
+  box-shadow: 0 1px 3px rgba(22, 26, 29, .12);
+}
+
+.err {
+  color: #a3221f;
+  background: #fdeceb;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+
+/* =========================================================
+   Campos de formulario
+   ========================================================= */
+.f {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d4247;
+  margin-bottom: 6px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #dcd8d1;
+  border-radius: 10px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+  background: #fcfcfb;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #a6a6a8;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #bdb8af;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(155, 34, 71, .12);
+}
+
+/* =========================================================
+   Botón principal
+   ========================================================= */
+.btn {
+  width: 100%;
+  height: 46px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  font: 600 14.5px 'Noto Sans', system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(155, 34, 71, .25);
+  transition: background .15s, transform .1s;
+}
+
+.btn:hover {
+  background: var(--brandosc);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* =========================================================
+   Estructura: menú lateral + contenido
+   ========================================================= */
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.side {
+  flex-shrink: 0;
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid var(--line);
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.side .marca {
+  padding: 0 6px 20px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.side-eti {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dorado);
+  padding: 4px 12px 8px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: #4a4d50;
+  font: 500 14px 'Noto Sans', system-ui, sans-serif;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.nav svg {
+  color: #8d8d8f;
+}
+
+.nav:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.nav.on {
+  background: var(--brandsoft);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.nav.on svg {
+  color: var(--brand);
+}
+
+.side-pie {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.yo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+}
+
+.yo-av {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--cremasoft);
+  color: var(--dorado);
+  display: grid;
+  place-items: center;
+}
+
+.yo div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.yo strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yo span {
+  font-size: 12px;
+  color: var(--mut);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cont {
+  padding: 28px 32px 40px;
+}
+
+.nav:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.nav:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* =========================================================
+   Encabezado de cada vista
+   ========================================================= */
+.top {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 22px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+/* franja guinda → dorado arriba del encabezado */
+.top::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand) 0 70%, var(--dorado) 70% 100%);
+}
+
+.top-tit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.top-ico {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--brand);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(155, 34, 71, .28);
+}
+
+.miga {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--dorado);
+  margin-bottom: 2px;
+}
+
+.top h1 {
+  font-size: 23px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.chip-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cremasoft);
+  color: #6d5419;
+  border: 1px solid #efe2bb;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* =========================================================
+   Acomodo del contenido
+   ========================================================= */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.fila2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fila3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* =========================================================
+   Tarjetas
+   ========================================================= */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--sombra);
+}
+
+.card-h {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: -24px -24px 22px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.card-ico {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--brandsoft);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+}
+
+.card-tit {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-tit h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-tit p {
+  font-size: 13px;
+  color: var(--mut);
+  margin-top: 1px;
+}
+
+/* =========================================================
+   Campos: extras
+   ========================================================= */
+textarea {
+  height: auto;
+  padding: 11px 13px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+input[readonly] {
+  background: var(--bg);
+  color: var(--mut);
+  border-style: dashed;
+  cursor: default;
+}
+
+/* CURP en mayúsculas, pero el placeholder normal */
+input.mayus {
+  text-transform: uppercase;
+}
+
+input.mayus::placeholder {
+  text-transform: none;
+}
+
+/* flechita propia para los select */
+select {
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  cursor: pointer;
+}
+
+.mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--mut);
+  margin-top: 6px;
+}
+
+/* =========================================================
+   Botones secundarios y barra de acciones
+   ========================================================= */
+.btn2 {
+  height: 46px;
+  padding: 0 22px;
+  border: 1px solid #dcd8d1;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: 600 14.5px 'Noto Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.btn2:hover {
+  background: var(--bg);
+}
+
+.barra-acciones {
+  margin-top: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: var(--sombra);
+}
+
+.barra-acciones .mini {
+  margin: 0;
+}
+
+.barra-acciones .botones {
+  display: flex;
+  gap: 10px;
+}
+
+.barra-acciones .btn {
+  width: auto;
+  padding: 0 26px;
+}
+
+/* =========================================================
+   Formulario + contenido lado a lado
+   ========================================================= */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.col-form {
+  flex: 1 1 320px;
+  max-width: 410px;
+}
+
+.col-main {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+/* input con icono a la izquierda (buscador) */
+.con-ico {
+  position: relative;
+}
+
+.con-ico svg {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9a9a9c;
+  pointer-events: none;
+}
+
+.con-ico input {
+  padding-left: 38px;
+}
+
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brand);
+  font: 600 13px 'Noto Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   Resumen del día
+   ========================================================= */
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dato {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--brand);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dato.pend { border-top-color: var(--dorado); }
+.dato.conf { border-top-color: var(--verde); }
+.dato.aten { border-top-color: #5b6b7a; }
+
+.dato span {
+  font-size: 13px;
+  color: var(--mut);
+  font-weight: 500;
+}
+
+.dato strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* =========================================================
+   Tablas
+   ========================================================= */
+.fecha-chica {
+  width: auto;
+  height: 38px;
+}
+
+.tabla-box {
+  overflow-x: auto;
+  margin: 0 -24px -24px;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--mut);
+  background: #fbfaf8;
+  padding: 11px 24px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+/* =========================================================
+   Mensaje cuando no hay información
+   ========================================================= */
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 40px 16px;
+  color: var(--mut);
+  font-size: 13.5px;
+}
+
+.vacio strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.vacio-ico {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cremasoft);
+  color: var(--dorado);
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   Signos vitales
+   ========================================================= */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.signos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.signo {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  transition: border-color .15s;
+}
+
+/* el cuadro se pinta guinda cuando escribes dentro */
+.signo:focus-within {
+  border-color: var(--brand);
+}
+
+.signo label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.signo-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--brandsoft);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+/* IMC resaltado en crema */
+.signo.imc {
+  background: var(--cremasoft);
+  border-color: #efe2bb;
+}
+
+.signo.imc .signo-ico {
+  background: var(--crema);
+  color: #6d5419;
+}
+
+.signo.imc input {
+  background: #fff;
+  border-style: solid;
+  color: var(--brandosc);
+  font-weight: 700;
+}
+
+/* input con la unidad a la derecha (kg, cm, °C…) */
+.con-unidad {
+  position: relative;
+}
+
+.con-unidad input {
+  padding-right: 64px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.con-unidad span {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--mut);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* barra de botones pegada al fondo de una tarjeta */
+.barra-acciones.dentro {
+  margin: 22px -24px -24px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 16px 16px;
+  box-shadow: none;
+  background: #fbfaf8;
+  padding: 16px 24px;
+}
+
+/* =========================================================
+   Pantallas angostas (tablet y celular)
+   ========================================================= */
+@media (max-width: 860px) {
+  .app { flex-direction: column; }
+  .side {
+    width: 100%;
+    height: auto;
+    position: static;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .side-pie { margin-top: 10px; }
+}
+
+@media (max-width: 700px) {
+  .cont { padding: 18px 16px 28px; }
+  .top { padding: 20px 16px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .fila3 { grid-template-columns: 1fr 1fr; }
+  .login-panel { padding: 32px 24px; }
+  .login-texto h2 { font-size: 26px; }
+  .barra-acciones .botones { width: 100%; }
+  .barra-acciones .btn,
+  .barra-acciones .btn2 { flex: 1; }
+}
