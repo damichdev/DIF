@@ -49,7 +49,8 @@ public class CitaController {
         return ResponseEntity.ok(citaService.registrarSignosVitales(id, signos));
     }
 
-    @PatchMapping("/{id}/estatus/{idEstatus}")
+    // Cambiado de @PatchMapping a @PutMapping para evitar bloqueos del cliente Feign
+    @PutMapping("/{id}/estatus/{idEstatus}")
     public ResponseEntity<CitaResponseDTO> cambiarEstatus(@PathVariable Long id, @PathVariable Long idEstatus) {
         return ResponseEntity.ok(citaService.cambiarEstatus(id, idEstatus));
     }

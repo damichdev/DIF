@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,32 +37,13 @@ public class ConsultaServiceImpl implements IConsultaService {
     @Override
     @Transactional
     public ConsultaResponseDTO registrarConsulta(ConsultaRequestDTO request) {
-        // Validar citas y médicos en sus microservicios
         CitaDTO cita = citaClient.obtenerPorId(request.getIdCita());
         MedicoDTO medico = medicoClient.obtenerPorId(request.getIdMedico());
 
         ExpedienteClinico expediente = expedienteRepository.findById(request.getIdExpedienteClinico())
                 .orElseThrow(() -> new ResourceNotFoundException("Expediente no encontrado con ID: " + request.getIdExpedienteClinico()));
 
-        Receta receta = null;
-        if (request.getReceta() != null) {
-            receta = Receta.builder()
-                    .folio(request.getReceta().getFolio())
-                    .indicaciones(request.getReceta().getIndicaciones())
-                    .build();
-
-            if (request.getReceta().getDetalles() != null) {
-                for (DetalleRecetaDTO d : request.getReceta().getDetalles()) {
-                    DetalleReceta det = DetalleReceta.builder()
-                            .medicamento(d.getMedicamento())
-                            .dosis(d.getDosis())
-                            .presentacion(d.getPresentacion())
-                            .duracion(d.getDuracion())
-                            .build();
-                    receta.agregarDetalle(det);
-                }
-            }
-        }
+        Receta receta = construirReceta(request.getReceta(), null);
 
         ConsultaMedica consulta = ConsultaMedica.builder()
                 .fechaHoraAtendida(LocalDateTime.now())
@@ -77,14 +59,58 @@ public class ConsultaServiceImpl implements IConsultaService {
 
         ConsultaMedica saved = consultaRepository.save(consulta);
 
-        // Actualizar estatus de cita a 3 ("Atendida") en citas-service
         try {
             citaClient.cambiarEstatus(request.getIdCita(), 3L);
         } catch (Exception ignored) {
-            // Log de advertencia si no se actualizó el estatus
         }
 
         return mapToResponse(saved, cita, medico);
+    }
+
+    @Override
+    @Transactional
+    public ConsultaResponseDTO guardarReceta(Long idConsulta, RecetaDTO request) {
+        ConsultaMedica consulta = consultaRepository.findById(idConsulta)
+                .orElseThrow(() -> new ResourceNotFoundException("Consulta médica no encontrada con ID: " + idConsulta));
+
+        // Usamos milisegundos para garantizar un folio único y que no choque en PostgreSQL
+        String folioAuto = "REC-" + System.currentTimeMillis();
+        Receta receta = construirReceta(request, folioAuto);
+
+        // Si la consulta ya tenía una receta previa, le ponemos su mismo ID para actualizarla en vez de duplicarla
+        if (consulta.getReceta() != null) {
+            receta.setIdReceta(consulta.getReceta().getIdReceta());
+        }
+
+        consulta.setReceta(receta);
+        ConsultaMedica saved = consultaRepository.save(consulta);
+        
+        return mapToResponse(saved, obtenerCitaSegura(saved.getIdCita()), obtenerMedicoSeguro(saved.getIdMedico()));
+    }
+
+    private Receta construirReceta(RecetaDTO dto, String folioPorDefecto) {
+        if (dto == null) return null;
+        String folio = (dto.getFolio() != null && !dto.getFolio().isBlank())
+                ? dto.getFolio()
+                : (folioPorDefecto != null ? folioPorDefecto : "REC-" + System.currentTimeMillis());
+
+        Receta receta = Receta.builder()
+                .folio(folio)
+                .indicaciones(dto.getIndicaciones())
+                .build();
+
+        if (dto.getDetalles() != null) {
+            for (DetalleRecetaDTO d : dto.getDetalles()) {
+                DetalleReceta det = DetalleReceta.builder()
+                        .medicamento(d.getMedicamento())
+                        .dosis(d.getDosis())
+                        .presentacion(d.getPresentacion())
+                        .duracion(d.getDuracion())
+                        .build();
+                receta.agregarDetalle(det);
+            }
+        }
+        return receta;
     }
 
     @Override
@@ -93,21 +119,33 @@ public class ConsultaServiceImpl implements IConsultaService {
         ConsultaMedica c = consultaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Consulta médica no encontrada con ID: " + id));
 
-        CitaDTO cita = citaClient.obtenerPorId(c.getIdCita());
-        MedicoDTO medico = medicoClient.obtenerPorId(c.getIdMedico());
-        return mapToResponse(c, cita, medico);
+        return mapToResponse(c, obtenerCitaSegura(c.getIdCita()), obtenerMedicoSeguro(c.getIdMedico()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConsultaResponseDTO> listarPorExpediente(Long idExpediente) {
         return consultaRepository.findByExpedienteClinicoIdExpedienteClinico(idExpediente).stream()
-                .map(c -> {
-                    CitaDTO cita = citaClient.obtenerPorId(c.getIdCita());
-                    MedicoDTO medico = medicoClient.obtenerPorId(c.getIdMedico());
-                    return mapToResponse(c, cita, medico);
-                })
+                .sorted(Comparator.comparing(ConsultaMedica::getFechaHoraAtendida, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(c -> mapToResponse(c, obtenerCitaSegura(c.getIdCita()), obtenerMedicoSeguro(c.getIdMedico())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConsultaResponseDTO> listarTodas() {
+        return consultaRepository.findAll().stream()
+                .sorted(Comparator.comparing(ConsultaMedica::getFechaHoraAtendida, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(c -> mapToResponse(c, obtenerCitaSegura(c.getIdCita()), obtenerMedicoSeguro(c.getIdMedico())))
+                .collect(Collectors.toList());
+    }
+
+    private CitaDTO obtenerCitaSegura(Long idCita) {
+        try { return citaClient.obtenerPorId(idCita); } catch (Exception e) { return null; }
+    }
+
+    private MedicoDTO obtenerMedicoSeguro(Long idMedico) {
+        try { return medicoClient.obtenerPorId(idMedico); } catch (Exception e) { return null; }
     }
 
     private ConsultaResponseDTO mapToResponse(ConsultaMedica c, CitaDTO cita, MedicoDTO medico) {
