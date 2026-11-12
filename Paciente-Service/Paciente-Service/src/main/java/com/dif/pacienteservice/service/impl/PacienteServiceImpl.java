@@ -1,5 +1,6 @@
 package com.dif.pacienteservice.service.impl;
 
+import com.dif.pacienteservice.dto.CatalogoItemDTO;
 import com.dif.pacienteservice.dto.PacienteRequestDTO;
 import com.dif.pacienteservice.dto.PacienteResponseDTO;
 import com.dif.pacienteservice.entity.DerechoHabiente;
@@ -13,6 +14,10 @@ import com.dif.pacienteservice.service.IPacienteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.Map;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +33,7 @@ public class PacienteServiceImpl implements IPacienteService {
     @Override
     @Transactional
     public PacienteResponseDTO crearPaciente(PacienteRequestDTO request) {
+        normalizar(request);
         if (pacienteRepository.existsByCurp(request.getCurp())) {
             throw new IllegalArgumentException("La CURP ya está registrada");
         }
@@ -45,6 +51,8 @@ public class PacienteServiceImpl implements IPacienteService {
                 .curp(request.getCurp())
                 .fechaNacimiento(request.getFechaNacimiento())
                 .telefono(request.getTelefono())
+                .tutor(request.getTutor())
+                .telTutor(request.getTelTutor())
                 .sexo(sexo)
                 .derechoAmbiente(da)
                 .build();
@@ -80,6 +88,7 @@ public class PacienteServiceImpl implements IPacienteService {
     @Override
     @Transactional
     public PacienteResponseDTO actualizarPaciente(Long id, PacienteRequestDTO request) {
+        normalizar(request);
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado con ID: " + id));
 
@@ -99,6 +108,8 @@ public class PacienteServiceImpl implements IPacienteService {
         paciente.setCurp(request.getCurp());
         paciente.setFechaNacimiento(request.getFechaNacimiento());
         paciente.setTelefono(request.getTelefono());
+        paciente.setTutor(request.getTutor());
+        paciente.setTelTutor(request.getTelTutor());
         paciente.setSexo(sexo);
         paciente.setDerechoAmbiente(da);
 
@@ -114,6 +125,47 @@ public class PacienteServiceImpl implements IPacienteService {
         pacienteRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PacienteResponseDTO> buscar(String texto) {
+        String q = texto == null ? "" : texto.trim().toLowerCase();
+        if (q.length() < 2) {
+            throw new IllegalArgumentException("Escribe al menos 2 caracteres para buscar");
+        }
+        return pacienteRepository.buscar(q).stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, List<CatalogoItemDTO>> catalogos() {
+        return Map.of(
+                "sexos", sexoRepository.findAll().stream()
+                        .map(x -> new CatalogoItemDTO(x.getIdSexo(), x.getNombreSexo())).toList(),
+                "derechos", derechoAmbienteRepository.findAll().stream()
+                        .map(x -> new CatalogoItemDTO(x.getIdDerechoAmbiente(), x.getNombreDerechoAmbiente())).toList());
+    }
+
+    // Limpia el texto y aplica la regla de negocio: un menor de edad necesita tutor
+    private void normalizar(PacienteRequestDTO r) {
+        r.setCurp(r.getCurp().trim().toUpperCase());
+        r.setApMaterno(vacioANulo(r.getApMaterno()));
+        r.setTelefono(vacioANulo(r.getTelefono()));
+        r.setTutor(vacioANulo(r.getTutor()));
+        r.setTelTutor(vacioANulo(r.getTelTutor()));
+        boolean menor = Period.between(r.getFechaNacimiento(), LocalDate.now()).getYears() < 18;
+        if (menor && r.getTutor() == null) {
+            throw new IllegalArgumentException("Paciente menor de edad: registra el nombre del tutor responsable");
+        }
+        if (!menor) { // los datos del tutor solo aplican a menores
+            r.setTutor(null);
+            r.setTelTutor(null);
+        }
+    }
+
+    private String vacioANulo(String t) {
+        return t == null || t.isBlank() ? null : t.trim();
+    }
+
     private PacienteResponseDTO mapToResponse(Paciente p) {
         return PacienteResponseDTO.builder()
                 .idPaciente(p.getIdPaciente())
@@ -123,6 +175,8 @@ public class PacienteServiceImpl implements IPacienteService {
                 .curp(p.getCurp())
                 .fechaNacimiento(p.getFechaNacimiento())
                 .telefono(p.getTelefono())
+                .tutor(p.getTutor())
+                .telTutor(p.getTelTutor())
                 .idSexo(p.getSexo().getIdSexo())
                 .nombreSexo(p.getSexo().getNombreSexo())
                 .idDerechoAmbiente(p.getDerechoAmbiente().getIdDerechoAmbiente())

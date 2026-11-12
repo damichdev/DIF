@@ -37,6 +37,13 @@ public class Paciente {
     @Column(name = "telefono", length = 20)
     private String telefono;
 
+    // Solo para menores de edad
+    @Column(length = 150)
+    private String tutor;
+
+    @Column(name = "tel_tutor", length = 20)
+    private String telTutor;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sexo", nullable = false)
     private Sexo sexo;

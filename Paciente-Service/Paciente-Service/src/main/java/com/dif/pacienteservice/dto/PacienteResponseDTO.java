@@ -17,6 +17,8 @@ public class PacienteResponseDTO {
     private String curp;
     private LocalDate fechaNacimiento;
     private String telefono;
+    private String tutor;
+    private String telTutor;
     private Long idSexo;
     private String nombreSexo;
     private Long idDerechoAmbiente;
