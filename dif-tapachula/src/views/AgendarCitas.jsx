@@ -1,66 +1,78 @@
+import { useState } from 'react'
 import Encabezado from '../components/Encabezado.jsx'
 import Seccion from '../components/Seccion.jsx'
 import Icono from '../components/Icono.jsx'
-import { useEffect, useState } from 'react'
-import { api, hoy, nombreCompleto } from '../api.js'
-import { ESTATUS } from '../catalogos.js'
+import {
+  ESTATUS, ESTATUS_CAT, MEDICOS, hoyISO, nombreCompleto, nombreEstatus, edad,
+} from '../recepcion/datos.js'
 
-// Contadores del día (salen del catálogo "Estatus Cita")
-const RESUMEN = [
-  { texto: 'Citas del día', clase: '', id: null },
-  { texto: 'Pendientes', clase: 'pend', id: 1 },
-  { texto: 'Confirmadas', clase: 'conf', id: 2 },
-  { texto: 'Atendidas', clase: 'aten', id: 3 },
-]
+export default function AgendarCitas({ rec, onIr }) {
+  const [busqueda, setBusqueda] = useState('')
+  const [form, setForm] = useState({ id_medico: '', fecha: hoyISO(), hora: '', motivo: '' })
+  const [fechaVista, setFechaVista] = useState(hoyISO())
+  const [errores, setErrores] = useState([])
+  const [aviso, setAviso] = useState('')
 
-const etiquetaPaciente = (p) => `${nombreCompleto(p)} · ${p.curp}`
+  const paciente = rec.pacienteActivo ? rec.pacientePorId(rec.pacienteActivo) : null
+  const expediente = paciente ? rec.expedienteDe(paciente.id_paciente) : null
+  const sugerencias = paciente ? [] : rec.buscar(busqueda)
 
-export default function AgendarCitas({ onIr }) {
-  const [medicos, setMedicos] = useState([])
-  const [pacientes, setPacientes] = useState([])
-  const [citas, setCitas] = useState([])
-  const [fecha, setFecha] = useState(hoy())
-  const [msg, setMsg] = useState(null)
-  const [enviando, setEnviando] = useState(false)
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
-  useEffect(() => {
-    Promise.all([api('/api/medicos'), api('/api/pacientes'), api('/api/citas')])
-      .then(([m, p, c]) => { setMedicos(m); setPacientes(p); setCitas(c) })
-      .catch((err) => setMsg({ ok: false, texto: 'No se pudieron cargar los datos: ' + err.message }))
-  }, []) 
+  const delDia = rec.citas
+    .filter((c) => c.fecha === fechaVista)
+    .sort((a, b) => a.hora.localeCompare(b.hora))
 
-  const delDia = citas.filter((c) => c.fecha === fecha).sort((a, b) => a.hora.localeCompare(b.hora))
+  const cuenta = (id) => delDia.filter((c) => c.id_estatus === id).length
+  const RESUMEN = [
+    { texto: 'Citas del día', clase: '', n: delDia.length },
+    { texto: 'Programadas', clase: 'pend', n: cuenta(ESTATUS.PROGRAMADA) },
+    { texto: 'En espera', clase: 'conf', n: cuenta(ESTATUS.EN_ESPERA) },
+    { texto: 'En consulta', clase: '', n: cuenta(ESTATUS.EN_CONSULTA) },
+    { texto: 'Atendidas', clase: 'aten', n: cuenta(ESTATUS.ATENDIDA) },
+  ]
 
-  async function agendar(e) {
+  function agendar(e) {
     e.preventDefault()
-    const form = e.target
-    const d = Object.fromEntries(new FormData(form))
-    const paciente = pacientes.find((p) => etiquetaPaciente(p) === d.paciente)
-    if (!paciente) {
-      setMsg({ ok: false, texto: 'Elige un paciente de la lista.' })
-      return
+    const faltas = []
+    if (!paciente) faltas.push('Elige al paciente.')
+    if (!form.id_medico) faltas.push('Selecciona el médico.')
+    if (!form.fecha) faltas.push('Indica la fecha.')
+    else if (form.fecha < hoyISO()) faltas.push('La fecha no puede ser anterior a hoy.')
+    if (!form.hora) faltas.push('Indica la hora.')
+    if (!form.motivo.trim()) faltas.push('Escribe el motivo de la visita.')
+
+    if (
+      form.id_medico && form.fecha && form.hora &&
+      rec.citas.some((c) => c.id_medico === Number(form.id_medico) && c.fecha === form.fecha && c.hora === form.hora)
+    ) {
+      faltas.push('Ese médico ya tiene una cita agendada a esa misma hora.')
     }
-    setEnviando(true)
-    setMsg(null)
-    try {
-      const cita = await api('/api/citas', 'POST', {
-        idPaciente: paciente.idPaciente,
-        idMedico: Number(d.idMedico),
-        fecha: d.fecha,
-        hora: d.hora,
-        motivo: d.motivo,
-        idEstatus: Number(d.idEstatus),
-      })
-      setCitas((cs) => [...cs, cita])
-      setFecha(cita.fecha)
-      setMsg({ ok: true, texto: `Cita agendada para ${nombreCompleto(cita.paciente)}.` })
-      form.reset()
-    } catch (err) {
-      setMsg({ ok: false, texto: err.message })
-    } finally {
-      setEnviando(false)
-    }
+
+    setErrores(faltas)
+    setAviso('')
+    if (faltas.length) return
+
+    rec.agendarCita({
+      id_paciente: paciente.id_paciente,
+      id_medico: Number(form.id_medico),
+      fecha: form.fecha,
+      hora: form.hora,
+      motivo: form.motivo.trim(),
+    })
+    setAviso(`Cita agendada para ${nombreCompleto(paciente)} el ${form.fecha} a las ${form.hora}.`)
+    setFechaVista(form.fecha)
+    setForm({ ...form, hora: '', motivo: '' })
+    rec.setPacienteActivo(null)
+    setBusqueda('')
   }
+
+  function tomarSignos(id_cita) {
+    rec.setCitaActiva(id_cita)
+    onIr('signos')
+  }
+
+  const medico = (id) => MEDICOS.find((m) => m.id === id)?.nombre ?? '—'
 
   return (
     <>
@@ -68,83 +80,132 @@ export default function AgendarCitas({ onIr }) {
         icono="calendario"
         area="Recepción"
         titulo="Agendar citas"
-        sub="Programa las citas de los pacientes con su médico"
+        sub="Programa la visita del paciente; al tomar sus signos pasa a lista de espera"
       />
 
       <div className="cont">
-        {/* ---------- Resumen del día ---------- */}
         <div className="resumen">
           {RESUMEN.map((r) => (
             <div key={r.texto} className={`dato ${r.clase}`}>
               <span>{r.texto}</span>
-              <strong>{r.id ? delDia.filter((c) => c.idEstatus === r.id).length : delDia.length}</strong>
+              <strong>{r.n}</strong>
             </div>
           ))}
         </div>
 
         <div className="split">
-          {/* ---------- Formulario: tabla Cita ---------- */}
-          <form className="col-form" onSubmit={agendar}>
-            <Seccion icono="calendario" titulo="Nueva cita" sub="Datos de la tabla Cita">
+          <form className="col-form" onSubmit={agendar} noValidate>
+            <Seccion icono="calendario" titulo="Nueva cita" sub="Paciente, médico, fecha y motivo">
+              {errores.length > 0 && (
+                <div className="err" role="alert">
+                  <ul>{errores.map((m) => <li key={m}>{m}</li>)}</ul>
+                </div>
+              )}
+              {aviso && (
+                <div className="ok chico" role="status">
+                  <Icono nombre="check" tam={18} />
+                  <div><strong>{aviso}</strong></div>
+                </div>
+              )}
+
               <div className="f">
                 <label htmlFor="pac">Paciente</label>
-                <div className="con-ico">
-                  <Icono nombre="buscar" tam={16} />
-                  <input id="pac" name="paciente" list="lista-pacientes" required autoComplete="off" placeholder="Nombre o CURP…" />
-                  <datalist id="lista-pacientes">
-                    {pacientes.map((p) => <option key={p.idPaciente} value={etiquetaPaciente(p)} />)}
-                  </datalist>
-                </div>
-                <p className="mini">
-                  ¿No existe? <button type="button" className="link" onClick={() => onIr('registrar')}>Registrar paciente</button>
-                </p>
+                {paciente ? (
+                  <div className="chip-pac">
+                    <div>
+                      <strong>{nombreCompleto(paciente)}</strong>
+                      <span>{expediente?.no_expediente} · {edad(paciente.fecha_nacimiento)} años · {paciente.curp}</span>
+                    </div>
+                    <button type="button" className="link" onClick={() => rec.setPacienteActivo(null)}>Cambiar</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="con-ico">
+                      <Icono nombre="buscar" tam={16} />
+                      <input
+                        id="pac"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        placeholder="Nombre, CURP o No. de expediente…"
+                        autoComplete="off"
+                      />
+                    </div>
+                    {sugerencias.length > 0 && (
+                      <ul className="res-lista compacta">
+                        {sugerencias.slice(0, 5).map(({ paciente: p, expediente: x }) => (
+                          <li key={p.id_paciente}>
+                            <button type="button" onClick={() => rec.setPacienteActivo(p.id_paciente)}>
+                              <strong>{nombreCompleto(p)}</strong>
+                              <span>{x?.no_expediente} · {p.curp}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {busqueda.trim().length >= 2 && sugerencias.length === 0 && (
+                      <p className="mini">Sin resultados.</p>
+                    )}
+                    <p className="mini">
+                      ¿No existe? <button type="button" className="link" onClick={() => onIr('registrar')}>Registrar paciente</button>
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="f">
                 <label htmlFor="med">Médico</label>
-                <select id="med" name="idMedico" required>
-                  <option value="">{medicos.length ? 'Selecciona…' : 'No hay médicos registrados'}</option>
-                  {medicos.map((m) => (
-                    <option key={m.idMedico} value={m.idMedico}>{nombreCompleto(m)} · {m.areaEspecialidad}</option>
-                  ))}
+                <select id="med" value={form.id_medico} onChange={set('id_medico')}>
+                  <option value="">Selecciona…</option>
+                  {MEDICOS.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {m.area}</option>)}
                 </select>
               </div>
 
               <div className="fila2">
                 <div className="f">
                   <label htmlFor="fecha">Fecha</label>
-                  <input id="fecha" name="fecha" type="date" required min={hoy()} />
+                  <input id="fecha" type="date" min={hoyISO()} value={form.fecha} onChange={set('fecha')} />
                 </div>
                 <div className="f">
                   <label htmlFor="hora">Hora</label>
-                  <input id="hora" name="hora" type="time" required />
+                  <input id="hora" type="time" value={form.hora} onChange={set('hora')} />
                 </div>
               </div>
 
               <div className="f">
-                <label htmlFor="mot">Motivo</label>
-                <textarea id="mot" name="motivo" rows={3} required placeholder="Ej. control de rutina" />
+                <label htmlFor="mot">Motivo de la visita</label>
+                <textarea
+                  id="mot"
+                  rows={3}
+                  value={form.motivo}
+                  onChange={set('motivo')}
+                  placeholder="Ej. consulta general, control de rutina"
+                />
               </div>
 
               <div className="f">
                 <label htmlFor="est">Estatus de la cita</label>
-                <select id="est" name="idEstatus" required defaultValue="1">
-                  {ESTATUS.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-                </select>
+                <input id="est" value="Programada" readOnly />
+                <p className="mini">Cambia automáticamente a «En espera» al registrar signos vitales.</p>
               </div>
 
-              {msg && <p className={msg.ok ? 'ok' : 'err'} role="status">{msg.texto}</p>}
-              <button className="btn" type="submit" disabled={enviando}>{enviando ? 'Guardando…' : 'Agendar cita'}</button>
+              <button className="btn" type="submit">Agendar cita</button>
             </Seccion>
           </form>
 
-          {/* ---------- Citas del día ---------- */}
           <Seccion
             className="col-main"
             icono="reloj"
             titulo="Citas del día"
-            sub="Agenda de todos los médicos"
-            extra={<input type="date" aria-label="Fecha a consultar" className="fecha-chica" value={fecha} onChange={(e) => setFecha(e.target.value)} />}
+            sub="Agenda general de la consulta médica"
+            extra={
+              <input
+                type="date"
+                aria-label="Fecha a consultar"
+                className="fecha-chica"
+                value={fechaVista}
+                onChange={(e) => setFechaVista(e.target.value)}
+              />
+            }
           >
             <div className="tabla-box">
               <table className="tabla">
@@ -155,30 +216,49 @@ export default function AgendarCitas({ onIr }) {
                     <th>Médico</th>
                     <th>Motivo</th>
                     <th>Estatus</th>
+                    <th><span className="sr">Acción</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {delDia.map((c) => (
-                    <tr key={c.idCita}>
-                      <td>{c.hora.slice(0, 5)}</td>
-                      <td>{c.paciente ? nombreCompleto(c.paciente) : `#${c.idCita}`}</td>
-                      <td>{c.medico ? nombreCompleto(c.medico) : '—'}</td>
-                      <td>{c.motivo}</td>
-                      <td>{c.nombreEstatus}</td>
+                  {delDia.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <div className="vacio">
+                          <span className="vacio-ico"><Icono nombre="calendario" tam={26} /></span>
+                          <strong>No hay citas para este día</strong>
+                          <span>Las citas agendadas aparecerán organizadas aquí.</span>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                  {!delDia.length && <tr>
-                    <td colSpan={5}>
-                      <div className="vacio">
-                        <span className="vacio-ico"><Icono nombre="calendario" tam={26} /></span>
-                        <strong>No hay citas para este día</strong>
-                        <span>Las citas que agendes aparecerán aquí.</span>
-                      </div>
-                    </td>
-                  </tr>}
+                  ) : delDia.map((c) => {
+                    const p = rec.pacientePorId(c.id_paciente)
+                    const est = nombreEstatus(c.id_estatus)
+                    return (
+                      <tr key={c.id_cita}>
+                        <td><strong>{c.hora}</strong></td>
+                        <td>
+                          {p ? nombreCompleto(p) : '—'}
+                          <div className="mini sin-margen">{rec.expedienteDe(c.id_paciente)?.no_expediente}</div>
+                        </td>
+                        <td>{medico(c.id_medico)}</td>
+                        <td>{c.motivo}</td>
+                        <td><span className={`badge ${est.clase}`}>{est.nombre}</span></td>
+                        <td>
+                          {c.id_estatus === ESTATUS.PROGRAMADA && c.fecha === hoyISO() && (
+                            <button type="button" className="btn2 chico" onClick={() => tomarSignos(c.id_cita)}>
+                              Tomar signos
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+            <p className="mini">
+              Secuencia de estatus: {ESTATUS_CAT.map((e) => e.nombre).join(' → ')}.
+            </p>
           </Seccion>
         </div>
       </div>

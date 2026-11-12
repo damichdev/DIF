@@ -4,6 +4,7 @@ import Layout from './components/Layout.jsx'
 import RegistrarPaciente from './views/RegistrarPaciente.jsx'
 import AgendarCitas from './views/AgendarCitas.jsx'
 import SignosVitales from './views/SignosVitales.jsx'
+import { useRecepcion } from './recepcion/useRecepcion.js'
 import BusquedaPacientes from './views/BusquedaPacientes.jsx'
 import ExpedienteClinico from './views/ExpedienteClinico.jsx'
 import ConsultaMedica from './views/ConsultaMedica.jsx'
@@ -34,6 +35,7 @@ const INICIO = { R: 'registrar', M: 'busqueda', E: 'signos' }
 export default function App(){
   const [sesion, setSesion] = useState(null)
   const [vista, setVista] = useState('')
+  const rec = useRecepcion(sesion) // estado compartido de Recepción
 
   // Devuelve un mensaje de error, o nada si entró
   function entrar(datos){
@@ -58,7 +60,7 @@ export default function App(){
   return (
     <Layout sesion={sesion} vista={vista} onIr={setVista} onSalir={salir}>
       {Vista ? (
-        <Vista onIr={setVista} />
+        <Vista rec={rec} onIr={setVista} />
       ) : (
         <div className="cont">
           <h1>{vista}</h1>
