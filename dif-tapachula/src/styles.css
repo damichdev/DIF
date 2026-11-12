@@ -939,3 +939,58 @@ select {
   .barra-acciones .btn,
   .barra-acciones .btn2 { flex: 1; }
 }
+/* =========================================================
+   Médico: casillas de opción y renglones de receta
+   ========================================================= */
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.opcion input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+}
+
+.opcion:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--brandsoft);
+  color: var(--brandosc);
+}
+
+.stack > .barra-acciones {
+  margin-top: 0;
+}
+
+.renglon-med {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1.2fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.renglon-med .btn2 {
+  height: 44px;
+  margin-bottom: 16px;
+  padding: 0 14px;
+}
+
+@media (max-width: 700px) {
+  .renglon-med { grid-template-columns: 1fr 1fr; }
+}

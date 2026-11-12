@@ -13,10 +13,16 @@ const MENU = {
     { vista: 'historial', texto: 'Historial médico', icono: 'lista' },
     { vista: 'receta', texto: 'Generar receta', icono: 'pastilla' },
   ],
+  E: [
+    { vista: 'signos', texto: 'Signos vitales', icono: 'pulso' },
+    { vista: 'busqueda', texto: 'Búsqueda de pacientes', icono: 'buscar' },
+  ],
 }
 
+const ROLES = { R: 'Recepción', M: 'Médico', E: 'Enfermería' }
+
 export default function Layout({ sesion, vista, onIr, onSalir, children }) {
-  const rolTexto = sesion.rol === 'R' ? 'Recepción' : 'Médico'
+  const rolTexto = ROLES[sesion.rol]
 
   return (
     <div className="app">
