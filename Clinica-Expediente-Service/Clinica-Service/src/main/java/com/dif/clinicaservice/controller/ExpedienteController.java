@@ -2,6 +2,7 @@ package com.dif.clinicaservice.controller;
 
 import com.dif.clinicaservice.dto.ExpedienteRequestDTO;
 import com.dif.clinicaservice.dto.ExpedienteResponseDTO;
+import com.dif.clinicaservice.dto.ExpedienteUpdateDTO;
 import com.dif.clinicaservice.service.IExpedienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,19 @@ public class ExpedienteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(expedienteService.abrirExpediente(request));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ExpedienteResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ExpedienteUpdateDTO request) {
+        return ResponseEntity.ok(expedienteService.actualizarExpediente(id, request));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ExpedienteResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(expedienteService.obtenerPorId(id));
+    }
+
+    @GetMapping("/numero/{noExpediente}")
+    public ResponseEntity<ExpedienteResponseDTO> obtenerPorNumero(@PathVariable String noExpediente) {
+        return ResponseEntity.ok(expedienteService.obtenerPorNumero(noExpediente));
     }
 
     @GetMapping("/paciente/{idPaciente}")
