@@ -1143,3 +1143,11 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 700px) {
   .renglon-med { grid-template-columns: 1fr 1fr; }
 }
+
+/* Zona derecha del encabezado de pantalla: fecha + acción opcional */
+.top-der { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top-der .btn { width: auto; padding: 0 22px; flex-shrink: 0; }
+
+/* Acciones de cada resultado de búsqueda: en fila, no apiladas */
+.res-lista li > .botones { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.res-lista li > .botones .btn2 { width: auto; white-space: nowrap; }

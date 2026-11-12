@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Encabezado from '../components/Encabezado.jsx'
 import Seccion from '../components/Seccion.jsx'
 import Icono from '../components/Icono.jsx'
-import {
-  ESTATUS, MEDICOS, hoyISO, edad, nombreCompleto, nombreSexo,
-} from '../recepcion/datos.js'
+import { api, expedienteDe, nombreCompleto } from '../api.js'
+import { hoyISO, edad } from '../recepcion/datos.js'
 
 const SIGNOS = [
   { id: 'ta', name: 'ta', etq: 'Tensión arterial', u: 'mmHg', icono: 'corazon', ph: '120/80' },
@@ -37,14 +36,36 @@ export default function SignosVitales({ rec, onIr }) {
   const [v, setV] = useState(VACIO)
   const [errores, setErrores] = useState([])
   const [guardado, setGuardado] = useState(null)
+  const [ocupado, setOcupado] = useState(false)
+  const [lista, setLista] = useState(null) // citas de hoy; null = cargando
+  const [detalle, setDetalle] = useState(null) // { idPaciente, paciente, expediente } de la cita elegida
 
-  const pendientes = rec.citas
-    .filter((c) => c.fecha === hoyISO() && c.id_estatus === ESTATUS.PROGRAMADA)
-    .sort((a, b) => a.hora.localeCompare(b.hora))
+  // Citas de hoy que siguen "Programada" (las que ya tienen signos pasan a "En espera")
+  const cargar = useCallback(() => api(`/api/citas?fecha=${hoyISO()}`)
+    .then((citas) => setLista(citas.filter((c) => c.nombreEstatus === 'Programada')))
+    .catch((err) => {
+      setLista([])
+      setErrores([`No se pudieron cargar las citas: ${err.message}`])
+    }), [])
 
-  const cita = pendientes.find((c) => c.id_cita === rec.citaActiva) ?? null
-  const paciente = cita ? rec.pacientePorId(cita.id_paciente) : null
-  const expediente = paciente ? rec.expedienteDe(paciente.id_paciente) : null
+  useEffect(() => { cargar() }, [cargar])
+
+  const pendientes = lista ?? []
+  const cita = pendientes.find((c) => c.idCita === rec.citaActiva) ?? null
+  const idPaciente = cita?.paciente.idPaciente
+
+  // Datos completos del paciente (edad, sexo, alergias) de la cita elegida
+  useEffect(() => {
+    if (!idPaciente) return
+    let vigente = true
+    Promise.all([api(`/api/pacientes/${idPaciente}`), expedienteDe(idPaciente)])
+      .then(([paciente, expediente]) => { if (vigente) setDetalle({ idPaciente, paciente, expediente }) })
+      .catch((err) => { if (vigente) setErrores([err.message]) })
+    return () => { vigente = false }
+  }, [idPaciente])
+
+  const paciente = idPaciente && detalle?.idPaciente === idPaciente ? detalle.paciente : null
+  const expediente = paciente ? detalle.expediente : null
   const imc = calcularImc(v.peso, v.talla)
 
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value.replace(',', '.') })
@@ -78,34 +99,45 @@ export default function SignosVitales({ rec, onIr }) {
       const n = parseFloat(v[campo])
       if (v[campo] === '' || Number.isNaN(n)) faltas.push(`Ingresa un valor válido para ${nombre.toLowerCase()}.`)
       else if (n < min || n > max) faltas.push(`${nombre} fuera de rango (${min}–${max}).`)
+      else if (['fc', 'fr', 'spo2'].includes(campo) && !Number.isInteger(n)) {
+        faltas.push(`${nombre} debe ser un número entero.`)
+      }
     }
     return faltas
   }
 
-  function guardar(e) {
+  async function guardar(e) {
     e.preventDefault()
+    if (ocupado) return
     const faltas = validar()
     setErrores(faltas)
     if (faltas.length) return
 
-    const registro = rec.guardarSignos(cita.id_cita, {
-      ta: v.ta,
-      fc: Number(v.fc),
-      fr: Number(v.fr),
-      temperatura: Number(v.temperatura),
-      spo2: Number(v.spo2),
-      peso: Number(v.peso),
-      talla: Number(v.talla),
-      imc: Number(imc),
-      glucosa: v.glucosa === '' ? null : Number(v.glucosa),
-    })
-
-    setGuardado({ paciente: nombreCompleto(paciente), hora: registro.hora })
-    rec.setCitaActiva(null)
-    setV(VACIO)
+    setOcupado(true)
+    try {
+      // El servidor valida, calcula el IMC y pasa la cita a «En espera» en la misma operación
+      const r = await api(`/api/citas/${cita.idCita}/signos`, 'PUT', {
+        ta: v.ta,
+        fc: Number(v.fc),
+        fr: Number(v.fr),
+        temperatura: Number(v.temperatura),
+        spo2: Number(v.spo2),
+        peso: Number(v.peso),
+        talla: Number(v.talla),
+        glucosa: v.glucosa === '' ? null : Number(v.glucosa),
+      })
+      setGuardado({ paciente: nombreCompleto(r.paciente), hora: r.signosVitales.fechaRegistro.slice(11, 16) })
+      rec.setCitaActiva(null)
+      setV(VACIO)
+      await cargar()
+    } catch (err) {
+      setErrores([err.message])
+    } finally {
+      setOcupado(false)
+    }
   }
 
-  const medico = cita ? MEDICOS.find((m) => m.id === cita.id_medico)?.nombre : ''
+  const medico = cita ? [cita.medico.nombre, cita.medico.apPaterno].filter(Boolean).join(' ') : ''
 
   return (
     <>
@@ -119,14 +151,13 @@ export default function SignosVitales({ rec, onIr }) {
       <div className="cont split">
         <div className="col-form stack">
           <Seccion icono="reloj" titulo="Cita" sub="Citas programadas para el día de hoy">
-            <select id="cita" aria-label="Cita de hoy" value={cita?.id_cita ?? ''} onChange={elegirCita}>
+            <select id="cita" aria-label="Cita de hoy" value={cita?.idCita ?? ''} onChange={elegirCita}>
               <option value="">
-                {pendientes.length ? 'Selecciona una cita…' : 'No hay citas pendientes hoy'}
+                {lista === null ? 'Cargando citas…' : pendientes.length ? 'Selecciona una cita…' : 'No hay citas pendientes hoy'}
               </option>
-              {pendientes.map((c) => {
-                const p = rec.pacientePorId(c.id_paciente)
-                return <option key={c.id_cita} value={c.id_cita}>{c.hora} hrs · {p ? nombreCompleto(p) : '—'}</option>
-              })}
+              {pendientes.map((c) => (
+                <option key={c.idCita} value={c.idCita}>{c.hora.slice(0, 5)} hrs · {nombreCompleto(c.paciente)}</option>
+              ))}
             </select>
             {pendientes.length === 0 && (
               <p className="mini">
@@ -139,9 +170,9 @@ export default function SignosVitales({ rec, onIr }) {
             {paciente ? (
               <dl className="datos-pac">
                 <div><dt>Nombre</dt><dd>{nombreCompleto(paciente)}</dd></div>
-                <div><dt>Edad / Sexo</dt><dd>{edad(paciente.fecha_nacimiento)} años · {nombreSexo(paciente.id_sexo)}</dd></div>
+                <div><dt>Edad / Sexo</dt><dd>{edad(paciente.fechaNacimiento)} años · {paciente.nombreSexo}</dd></div>
                 <div><dt>CURP</dt><dd>{paciente.curp}</dd></div>
-                <div><dt>Expediente</dt><dd>{expediente?.no_expediente}</dd></div>
+                <div><dt>Expediente</dt><dd>{expediente?.noExpediente ?? 'sin expediente'}</dd></div>
                 <div><dt>Médico asignado</dt><dd>{medico}</dd></div>
                 <div><dt>Motivo</dt><dd>{cita.motivo}</dd></div>
                 {expediente?.alergias && <div><dt>Alergias</dt><dd>{expediente.alergias}</dd></div>}
@@ -245,7 +276,7 @@ export default function SignosVitales({ rec, onIr }) {
               <p className="mini">
                 <Icono nombre="info" tam={14} /> El IMC se calcula automáticamente con el peso (kg) y talla (cm).
               </p>
-              <button className="btn" type="submit" disabled={!cita}>Guardar signos vitales</button>
+              <button className="btn" type="submit" disabled={!cita || ocupado}>{ocupado ? 'Guardando…' : 'Guardar signos vitales'}</button>
             </div>
           </Seccion>
         </form>

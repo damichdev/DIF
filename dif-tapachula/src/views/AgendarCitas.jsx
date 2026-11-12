@@ -1,78 +1,144 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Encabezado from '../components/Encabezado.jsx'
 import Seccion from '../components/Seccion.jsx'
 import Icono from '../components/Icono.jsx'
-import {
-  ESTATUS, ESTATUS_CAT, MEDICOS, hoyISO, nombreCompleto, nombreEstatus, edad,
-} from '../recepcion/datos.js'
+import { api, buscarPacientes, expedienteDe, nombreCompleto } from '../api.js'
+import { edad, hoyISO } from '../recepcion/datos.js'
+
+// Estilo de cada estatus (los nombres e ids vienen del backend)
+const CLASE = {
+  Programada: 'prog', 'En espera': 'espera', 'En consulta': 'consulta', Atendida: 'atendida', Cancelada: '',
+}
+const CLASE_RESUMEN = { Programada: 'pend', 'En espera': 'conf', Atendida: 'aten' }
+
+// Orden del flujo (los ids del catálogo no lo siguen: Clínica usa el 3 para «Atendida»)
+const ORDEN = ['Programada', 'En espera', 'En consulta', 'Atendida', 'Cancelada']
+const porFlujo = (a, b) => ORDEN.indexOf(a.nombreEstatus) - ORDEN.indexOf(b.nombreEstatus)
+
+const nombreMedico = (m) => [m.nombre, m.apPaterno].filter(Boolean).join(' ')
 
 export default function AgendarCitas({ rec, onIr }) {
+  const [medicos, setMedicos] = useState([])
+  const [estatus, setEstatus] = useState([])
+  const [agenda, setAgenda] = useState({ fecha: null, citas: [] })
+  const [ocupado, setOcupado] = useState(false)
+
   const [busqueda, setBusqueda] = useState('')
-  const [form, setForm] = useState({ id_medico: '', fecha: hoyISO(), hora: '', motivo: '' })
+  const [sugerencias, setSugerencias] = useState([])
+  const [paciente, setPaciente] = useState(null)
+  const [expediente, setExpediente] = useState(null)
+
+  const [form, setForm] = useState({ idMedico: '', fecha: hoyISO(), hora: '', motivo: '' })
   const [fechaVista, setFechaVista] = useState(hoyISO())
   const [errores, setErrores] = useState([])
   const [aviso, setAviso] = useState('')
 
-  const paciente = rec.pacienteActivo ? rec.pacientePorId(rec.pacienteActivo) : null
-  const expediente = paciente ? rec.expedienteDe(paciente.id_paciente) : null
-  const sugerencias = paciente ? [] : rec.buscar(busqueda)
+  const citas = agenda.citas
+  const cargando = agenda.fecha !== fechaVista
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
-  const delDia = rec.citas
-    .filter((c) => c.fecha === fechaVista)
-    .sort((a, b) => a.hora.localeCompare(b.hora))
+  // Médicos y catálogo de estatus: una sola vez
+  useEffect(() => {
+    Promise.all([api('/api/medicos'), api('/api/citas/estatus')])
+      .then(([m, e]) => { setMedicos(m); setEstatus([...e].sort(porFlujo)) })
+      .catch((err) => setErrores([`No se pudieron cargar médicos y estatus: ${err.message}`]))
+  }, [])
 
-  const cuenta = (id) => delDia.filter((c) => c.id_estatus === id).length
+  // Agenda del día que se está viendo; "cargando" = todavía no llega la del día pedido
+  const cargarCitas = useCallback((fecha) => api(`/api/citas?fecha=${fecha}`)
+    .then((lista) => setAgenda({ fecha, citas: lista }))
+    .catch((err) => {
+      setAgenda({ fecha, citas: [] })
+      setErrores([`No se pudo cargar la agenda: ${err.message}`])
+    }), [])
+
+  useEffect(() => { if (fechaVista) cargarCitas(fechaVista) }, [fechaVista, cargarCitas])
+
+  // Paciente que viene de "Registrar paciente"
+  useEffect(() => {
+    if (!rec.pacienteActivo) return
+    let vigente = true
+    Promise.all([api(`/api/pacientes/${rec.pacienteActivo}`), expedienteDe(rec.pacienteActivo)])
+      .then(([p, x]) => { if (vigente) { setPaciente(p); setExpediente(x) } })
+      .catch((err) => { if (vigente) setErrores([err.message]) })
+    return () => { vigente = false }
+  }, [rec.pacienteActivo])
+
+  // Sugerencias mientras se escribe (espera 300 ms para no saturar el servidor)
+  useEffect(() => {
+    if (paciente || busqueda.trim().length < 2) return
+    let vigente = true
+    const t = setTimeout(() => {
+      buscarPacientes(busqueda)
+        .then((r) => { if (vigente) setSugerencias(r) })
+        .catch(() => { if (vigente) setSugerencias([]) })
+    }, 300)
+    return () => { vigente = false; clearTimeout(t) }
+  }, [busqueda, paciente])
+
+  function elegir(p, x) {
+    setPaciente(p)
+    setExpediente(x)
+    setSugerencias([])
+    setBusqueda('')
+  }
+
+  function cambiarPaciente() {
+    rec.setPacienteActivo(null)
+    setPaciente(null)
+    setExpediente(null)
+  }
+
+  const idDe = (nombre) => estatus.find((e) => e.nombreEstatus === nombre)?.idEstatus
+  const cuenta = (nombre) => citas.filter((c) => c.nombreEstatus === nombre).length
   const RESUMEN = [
-    { texto: 'Citas del día', clase: '', n: delDia.length },
-    { texto: 'Programadas', clase: 'pend', n: cuenta(ESTATUS.PROGRAMADA) },
-    { texto: 'En espera', clase: 'conf', n: cuenta(ESTATUS.EN_ESPERA) },
-    { texto: 'En consulta', clase: '', n: cuenta(ESTATUS.EN_CONSULTA) },
-    { texto: 'Atendidas', clase: 'aten', n: cuenta(ESTATUS.ATENDIDA) },
+    { texto: 'Citas del día', clase: '', n: citas.length },
+    ...estatus
+      .filter((e) => e.nombreEstatus !== 'Cancelada')
+      .map((e) => ({ texto: e.nombreEstatus, clase: CLASE_RESUMEN[e.nombreEstatus] ?? '', n: cuenta(e.nombreEstatus) })),
   ]
 
-  function agendar(e) {
+  async function agendar(e) {
     e.preventDefault()
+    if (ocupado) return
     const faltas = []
     if (!paciente) faltas.push('Elige al paciente.')
-    if (!form.id_medico) faltas.push('Selecciona el médico.')
+    if (!form.idMedico) faltas.push('Selecciona el médico.')
     if (!form.fecha) faltas.push('Indica la fecha.')
     else if (form.fecha < hoyISO()) faltas.push('La fecha no puede ser anterior a hoy.')
     if (!form.hora) faltas.push('Indica la hora.')
     if (!form.motivo.trim()) faltas.push('Escribe el motivo de la visita.')
-
-    if (
-      form.id_medico && form.fecha && form.hora &&
-      rec.citas.some((c) => c.id_medico === Number(form.id_medico) && c.fecha === form.fecha && c.hora === form.hora)
-    ) {
-      faltas.push('Ese médico ya tiene una cita agendada a esa misma hora.')
-    }
-
     setErrores(faltas)
     setAviso('')
     if (faltas.length) return
 
-    rec.agendarCita({
-      id_paciente: paciente.id_paciente,
-      id_medico: Number(form.id_medico),
-      fecha: form.fecha,
-      hora: form.hora,
-      motivo: form.motivo.trim(),
-    })
-    setAviso(`Cita agendada para ${nombreCompleto(paciente)} el ${form.fecha} a las ${form.hora}.`)
-    setFechaVista(form.fecha)
-    setForm({ ...form, hora: '', motivo: '' })
-    rec.setPacienteActivo(null)
-    setBusqueda('')
+    setOcupado(true)
+    try {
+      // El servidor valida choques de horario y fechas pasadas, y la deja "Programada"
+      await api('/api/citas', 'POST', {
+        idPaciente: paciente.idPaciente,
+        idMedico: Number(form.idMedico),
+        fecha: form.fecha,
+        hora: form.hora,
+        motivo: form.motivo.trim(),
+      })
+      setAviso(`Cita agendada para ${nombreCompleto(paciente)} el ${form.fecha} a las ${form.hora}.`)
+      setForm({ ...form, hora: '', motivo: '' })
+      cambiarPaciente()
+      if (fechaVista === form.fecha) await cargarCitas(form.fecha)
+      else setFechaVista(form.fecha)
+    } catch (err) {
+      setErrores([err.message])
+    } finally {
+      setOcupado(false)
+    }
   }
 
-  function tomarSignos(id_cita) {
-    rec.setCitaActiva(id_cita)
+  function tomarSignos(idCita) {
+    rec.setCitaActiva(idCita)
     onIr('signos')
   }
-
-  const medico = (id) => MEDICOS.find((m) => m.id === id)?.nombre ?? '—'
 
   return (
     <>
@@ -114,9 +180,9 @@ export default function AgendarCitas({ rec, onIr }) {
                   <div className="chip-pac">
                     <div>
                       <strong>{nombreCompleto(paciente)}</strong>
-                      <span>{expediente?.no_expediente} · {edad(paciente.fecha_nacimiento)} años · {paciente.curp}</span>
+                      <span>{expediente?.noExpediente ?? 'sin expediente'} · {edad(paciente.fechaNacimiento)} años · {paciente.curp}</span>
                     </div>
-                    <button type="button" className="link" onClick={() => rec.setPacienteActivo(null)}>Cambiar</button>
+                    <button type="button" className="link" onClick={cambiarPaciente}>Cambiar</button>
                   </div>
                 ) : (
                   <>
@@ -130,13 +196,13 @@ export default function AgendarCitas({ rec, onIr }) {
                         autoComplete="off"
                       />
                     </div>
-                    {sugerencias.length > 0 && (
+                    {busqueda.trim().length >= 2 && sugerencias.length > 0 && (
                       <ul className="res-lista compacta">
                         {sugerencias.slice(0, 5).map(({ paciente: p, expediente: x }) => (
-                          <li key={p.id_paciente}>
-                            <button type="button" onClick={() => rec.setPacienteActivo(p.id_paciente)}>
+                          <li key={p.idPaciente}>
+                            <button type="button" onClick={() => elegir(p, x)}>
                               <strong>{nombreCompleto(p)}</strong>
-                              <span>{x?.no_expediente} · {p.curp}</span>
+                              <span>{x?.noExpediente ?? 'sin expediente'} · {p.curp}</span>
                             </button>
                           </li>
                         ))}
@@ -154,9 +220,11 @@ export default function AgendarCitas({ rec, onIr }) {
 
               <div className="f">
                 <label htmlFor="med">Médico</label>
-                <select id="med" value={form.id_medico} onChange={set('id_medico')}>
+                <select id="med" value={form.idMedico} onChange={set('idMedico')}>
                   <option value="">Selecciona…</option>
-                  {MEDICOS.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {m.area}</option>)}
+                  {medicos.map((m) => (
+                    <option key={m.idMedico} value={m.idMedico}>{nombreMedico(m)} · {m.areaEspecialidad}</option>
+                  ))}
                 </select>
               </div>
 
@@ -188,7 +256,7 @@ export default function AgendarCitas({ rec, onIr }) {
                 <p className="mini">Cambia automáticamente a «En espera» al registrar signos vitales.</p>
               </div>
 
-              <button className="btn" type="submit">Agendar cita</button>
+              <button className="btn" type="submit" disabled={ocupado}>{ocupado ? 'Agendando…' : 'Agendar cita'}</button>
             </Seccion>
           </form>
 
@@ -220,7 +288,9 @@ export default function AgendarCitas({ rec, onIr }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {delDia.length === 0 ? (
+                  {cargando ? (
+                    <tr><td colSpan={6}><p className="mini">Cargando agenda…</p></td></tr>
+                  ) : citas.length === 0 ? (
                     <tr>
                       <td colSpan={6}>
                         <div className="vacio">
@@ -230,34 +300,30 @@ export default function AgendarCitas({ rec, onIr }) {
                         </div>
                       </td>
                     </tr>
-                  ) : delDia.map((c) => {
-                    const p = rec.pacientePorId(c.id_paciente)
-                    const est = nombreEstatus(c.id_estatus)
-                    return (
-                      <tr key={c.id_cita}>
-                        <td><strong>{c.hora}</strong></td>
-                        <td>
-                          {p ? nombreCompleto(p) : '—'}
-                          <div className="mini sin-margen">{rec.expedienteDe(c.id_paciente)?.no_expediente}</div>
-                        </td>
-                        <td>{medico(c.id_medico)}</td>
-                        <td>{c.motivo}</td>
-                        <td><span className={`badge ${est.clase}`}>{est.nombre}</span></td>
-                        <td>
-                          {c.id_estatus === ESTATUS.PROGRAMADA && c.fecha === hoyISO() && (
-                            <button type="button" className="btn2 chico" onClick={() => tomarSignos(c.id_cita)}>
-                              Tomar signos
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  ) : citas.map((c) => (
+                    <tr key={c.idCita}>
+                      <td><strong>{c.hora.slice(0, 5)}</strong></td>
+                      <td>
+                        {nombreCompleto(c.paciente)}
+                        <div className="mini sin-margen">{c.paciente.curp}</div>
+                      </td>
+                      <td>{nombreMedico(c.medico)}</td>
+                      <td>{c.motivo}</td>
+                      <td><span className={`badge ${CLASE[c.nombreEstatus] ?? ''}`}>{c.nombreEstatus}</span></td>
+                      <td>
+                        {c.idEstatus === idDe('Programada') && c.fecha === hoyISO() && (
+                          <button type="button" className="btn2 chico" onClick={() => tomarSignos(c.idCita)}>
+                            Tomar signos
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
             <p className="mini">
-              Secuencia de estatus: {ESTATUS_CAT.map((e) => e.nombre).join(' → ')}.
+              Secuencia de estatus: {estatus.filter((e) => e.nombreEstatus !== 'Cancelada').map((e) => e.nombreEstatus).join(' → ')}.
             </p>
           </Seccion>
         </div>
