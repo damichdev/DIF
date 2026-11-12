@@ -29,7 +29,7 @@ public class CitaRequestDTO {
     @NotNull(message = "El ID del médico es obligatorio")
     private Long idMedico;
 
-    @NotNull(message = "El ID de estatus es obligatorio")
+    // Opcional: una cita nueva nace "Programada"
     private Long idEstatus;
 
     private SignosVitalesDTO signosVitales;

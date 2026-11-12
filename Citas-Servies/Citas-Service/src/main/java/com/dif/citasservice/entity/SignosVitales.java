@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "signos_vitales")
@@ -42,4 +43,10 @@ public class SignosVitales {
 
     @Column(precision = 5, scale = 2)
     private BigDecimal imc;
+
+    @Column(precision = 5, scale = 1)
+    private BigDecimal glucosa;
+
+    @Column(name = "fecha_registro")
+    private LocalDateTime fechaRegistro;
 }
