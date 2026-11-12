@@ -1089,6 +1089,7 @@ input:focus, select:focus, textarea:focus {
   color: var(--brandosc);
   font-weight: 600;
 }
+/* =========================================================
    Médico: casillas de opción y renglones de receta
    ========================================================= */
 .opciones {
