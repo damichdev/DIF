@@ -213,6 +213,15 @@ h1, h2, h3, p {
   margin-bottom: 14px;
 }
 
+.ok {
+  color: var(--verde);
+  background: #e6f1ee;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+
 /* =========================================================
    Campos de formulario
    ========================================================= */

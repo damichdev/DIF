@@ -58,7 +58,7 @@ export default function App(){
   return (
     <Layout sesion={sesion} vista={vista} onIr={setVista} onSalir={salir}>
       {Vista ? (
-        <Vista />
+        <Vista onIr={setVista} />
       ) : (
         <div className="cont">
           <h1>{vista}</h1>
