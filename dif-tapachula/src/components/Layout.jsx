@@ -55,7 +55,7 @@ export default function Layout({ sesion, vista, onIr, onSalir, children }) {
           <div className="yo">
             <span className="yo-av"><Icono nombre="usuario" /></span>
             <div>
-              <strong>{sesion.correo}</strong>
+              <strong>{sesion.nombre}</strong>
               <span>{rolTexto}</span>
             </div>
           </div>

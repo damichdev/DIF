@@ -4,9 +4,12 @@ import com.dif.medicoservice.dto.MedicoRequestDTO;
 import com.dif.medicoservice.dto.MedicoResponseDTO;
 import com.dif.medicoservice.entity.Medico;
 import com.dif.medicoservice.exception.ResourceNotFoundException;
+import com.dif.medicoservice.entity.Usuario;
 import com.dif.medicoservice.repository.MedicoRepository;
+import com.dif.medicoservice.repository.UsuarioRepository;
 import com.dif.medicoservice.service.IMedicoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,8 @@ import java.util.stream.Collectors;
 public class MedicoServiceImpl implements IMedicoService {
 
     private final MedicoRepository medicoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder encoder;
 
     @Override
     @Transactional
@@ -36,10 +41,19 @@ public class MedicoServiceImpl implements IMedicoService {
                 .cedulaProfesional(request.getCedulaProfesional())
                 .areaEspecialidad(request.getAreaEspecialidad())
                 .correo(request.getCorreo())
-                .contrasena(request.getContrasena())
+                .contrasena(encoder.encode(request.getContrasena()))
                 .build();
 
-        return mapToResponse(medicoRepository.save(medico));
+        Medico guardado = medicoRepository.save(medico);
+        // Cada médico tiene su cuenta de acceso (rol M); comparte el hash, nunca texto plano
+        usuarioRepository.save(Usuario.builder()
+                .nombre(guardado.getNombre() + " " + guardado.getApPaterno())
+                .correo(guardado.getCorreo().trim().toLowerCase())
+                .contrasena(guardado.getContrasena())
+                .rol("M")
+                .idMedico(guardado.getIdMedico())
+                .build());
+        return mapToResponse(guardado);
     }
 
     @Override
@@ -71,9 +85,16 @@ public class MedicoServiceImpl implements IMedicoService {
         medico.setCedulaProfesional(request.getCedulaProfesional());
         medico.setAreaEspecialidad(request.getAreaEspecialidad());
         medico.setCorreo(request.getCorreo());
-        medico.setContrasena(request.getContrasena());
+        medico.setContrasena(encoder.encode(request.getContrasena()));
 
-        return mapToResponse(medicoRepository.save(medico));
+        Medico guardado = medicoRepository.save(medico);
+        usuarioRepository.findByIdMedico(id).ifPresent(u -> {
+            u.setNombre(guardado.getNombre() + " " + guardado.getApPaterno());
+            u.setCorreo(guardado.getCorreo().trim().toLowerCase());
+            u.setContrasena(guardado.getContrasena());
+            usuarioRepository.save(u);
+        });
+        return mapToResponse(guardado);
     }
 
     @Override
@@ -82,6 +103,7 @@ public class MedicoServiceImpl implements IMedicoService {
         if (!medicoRepository.existsById(id)) {
             throw new ResourceNotFoundException("Médico no encontrado con ID: " + id);
         }
+        usuarioRepository.findByIdMedico(id).ifPresent(usuarioRepository::delete);
         medicoRepository.deleteById(id);
     }
 

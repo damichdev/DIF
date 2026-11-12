@@ -1,19 +1,26 @@
 import { useState } from "react";
 
 export default function Login({ onEntrar }) {
-    const [rol, setRol] = useState('R')
     const [correo, setCorreo] = useState('')
     const [pass, setPass] = useState('')
     const [error, setError] = useState('')
+    const [cargando, setCargando] = useState(false)
 
-    function enviar(e) {
+    async function enviar(e) {
         e.preventDefault()
         if (!correo.trim() || !pass) {
             setError('Escribe tu correo y contraseña.')
             return
         }
-        const fallo = onEntrar({ rol, correo, pass })
-        if (fallo) setError(fallo)
+        setError('')
+        setCargando(true)
+        try {
+            await onEntrar(correo, pass)
+        } catch (err) {
+            // Sin respuesta del servidor el proxy devuelve error de red o 5xx
+            setError(err instanceof TypeError ? 'No hay conexión con el servidor.' : err.message)
+            setCargando(false)
+        }
     }
 
     return (
@@ -40,27 +47,23 @@ export default function Login({ onEntrar }) {
         <div className="login-form">
             <form className="lcard" onSubmit={enviar}>
                 <h1>Iniciar sesión</h1>
-                <p className="sub">Selecciona tu área y accede al sistema</p>
-
-                <div className="seg">
-                    <button type="button" className={rol === 'R' ? 'on' : ''} onClick={() => setRol('R')}>Recepción</button>
-                    <button type="button" className={rol === 'M' ? 'on' : ''} onClick={() => setRol('M')}>Médico</button>
-                </div>
+                <p className="sub">Accede con tu cuenta del sistema</p>
 
                 <div className="f">
                     <label htmlFor="usuario">Correo</label>
                     <input id="usuario" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)}
-                        placeholder={rol === 'M' ? 'dratorres@gmail.com' : 'nombreapellido@gmail.com'} />
+                        autoComplete="username" />
                 </div>
 
                 <div className="f">
                     <label htmlFor="pass">Contraseña</label>
-                    <input id="pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} />
+                    <input id="pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)}
+                        autoComplete="current-password" />
                 </div>
 
                 {error && <p className="err">{error}</p>}
 
-                <button className="btn" type="submit">Iniciar sesión</button>
+                <button className="btn" type="submit" disabled={cargando}>{cargando ? 'Entrando…' : 'Iniciar sesión'}</button>
             </form>
         </div>
     </div>

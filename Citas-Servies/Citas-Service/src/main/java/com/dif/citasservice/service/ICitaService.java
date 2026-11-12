@@ -4,12 +4,17 @@ import com.dif.citasservice.dto.CitaRequestDTO;
 import com.dif.citasservice.dto.CitaResponseDTO;
 import com.dif.citasservice.dto.SignosVitalesDTO;
 
+import com.dif.citasservice.entity.EstatusCita;
+
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ICitaService {
     CitaResponseDTO programarCita(CitaRequestDTO request);
     CitaResponseDTO obtenerPorId(Long id);
     List<CitaResponseDTO> listarTodas();
+    List<CitaResponseDTO> listarPorFecha(LocalDate fecha);
+    List<EstatusCita> catalogoEstatus();
     CitaResponseDTO registrarSignosVitales(Long idCita, SignosVitalesDTO signosDTO);
     CitaResponseDTO cambiarEstatus(Long idCita, Long nuevoEstatusId);
 }

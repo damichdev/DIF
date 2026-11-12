@@ -213,6 +213,15 @@ h1, h2, h3, p {
   margin-bottom: 14px;
 }
 
+.ok {
+  color: var(--verde);
+  background: #e6f1ee;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+
 /* =========================================================
    Campos de formulario
    ========================================================= */
@@ -940,6 +949,147 @@ select {
   .barra-acciones .btn2 { flex: 1; }
 }
 /* =========================================================
+   Recepción: flujo registrar → agendar → signos
+   ========================================================= */
+.ok {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #e8f3ef;
+  border: 1px solid #b9d9cf;
+  color: var(--verde);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.ok > div:not(.botones) { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.ok strong { color: var(--ink); }
+.ok span { font-size: 13.5px; color: var(--mut); }
+.ok.chico { margin-bottom: 14px; padding: 10px 14px; }
+.ok .botones { display: flex; gap: 10px; }
+
+.err ul { margin: 0; padding-left: 18px; }
+
+.busca { display: flex; gap: 12px; align-items: center; }
+.busca .con-ico { flex: 1; }
+.busca .btn[disabled], .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.paso2 { margin-top: 24px; }
+.tutor { border-top: 1px dashed var(--line); padding-top: 12px; }
+
+.res-lista { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.res-lista li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: #fff;
+}
+.res-lista li > div, .res-lista li > button { display: flex; flex-direction: column; gap: 2px; }
+.res-lista li span { font-size: 13px; color: var(--mut); }
+.res-lista.compacta { margin-top: 8px; }
+.res-lista.compacta li { padding: 0; }
+.res-lista.compacta li button {
+  width: 100%; text-align: left; background: none; border: 0; padding: 9px 14px;
+  cursor: pointer; font: inherit; border-radius: 10px;
+}
+.res-lista.compacta li button:hover { background: var(--brandsoft); }
+
+.chip-pac {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--brandsoft); border-radius: 10px; padding: 10px 14px;
+}
+.chip-pac div { display: flex; flex-direction: column; gap: 2px; }
+.chip-pac span { font-size: 13px; color: var(--mut); }
+
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.badge.prog { background: var(--cremasoft); color: var(--dorado); }
+.badge.espera { background: #e8f3ef; color: var(--verde); }
+.badge.consulta { background: var(--brandsoft); color: var(--brand); }
+.badge.atendida { background: #eceff2; color: #5b6b7a; }
+
+.btn2.chico { height: 34px; padding: 0 14px; font-size: 13px; }
+.mini.sin-margen { margin-top: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.sin-borde { border: 0; padding: 0; margin: 0; min-width: 0; }
+.sin-borde:disabled { opacity: .55; }
+
+.datos-pac { margin: 0; display: grid; gap: 10px; }
+.datos-pac div { display: flex; flex-direction: column; gap: 1px; }
+.datos-pac dt { font-size: 12px; color: var(--mut); text-transform: uppercase; letter-spacing: .03em; }
+.datos-pac dd { margin: 0; font-weight: 500; }
+
+.busca .btn,
+.vacio .btn,
+.ok .botones .btn {
+  width: auto;
+  padding: 0 26px;
+  flex-shrink: 0;
+}
+
+.busca .con-ico { flex: 1; min-width: 0; }
+.busca .con-ico input { width: 100%; }
+.vacio .btn { margin-top: 14px; }
+
+/* =========================================================
+   Mejoras Visuales de Interfaz para Recepción
+   ========================================================= */
+
+/* Transición suave y enfoque mejorado en campos */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(155, 34, 71, .15);
+  background: #ffffff;
+}
+
+/* Tarjeta de resumen con indicador visual de estado */
+.resumen .dato {
+  position: relative;
+  overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.resumen .dato:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+}
+
+/* Badges de estado más legibles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.badge.prog { background: #fef3c7; color: #92400e; }
+.badge.espera { background: #d1fae5; color: #065f46; }
+.badge.consulta { background: #fce7f3; color: #9d174d; }
+.badge.atendida { background: #e5e7eb; color: #374151; }
+
+/* Botones con mejor presencia */
+.btn {
+  background: linear-gradient(180deg, var(--brand) 0%, var(--brandosc) 100%);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.btn:hover {
+  opacity: .95;
+  box-shadow: 0 6px 16px rgba(155, 34, 71, .35);
+}
+
+/* Destaque de tarjeta del paciente seleccionado en Signos Vitales */
+.datos-pac dd {
+  color: var(--brandosc);
+  font-weight: 600;
+}
+/* =========================================================
    Médico: casillas de opción y renglones de receta
    ========================================================= */
 .opciones {
@@ -994,3 +1144,11 @@ select {
 @media (max-width: 700px) {
   .renglon-med { grid-template-columns: 1fr 1fr; }
 }
+
+/* Zona derecha del encabezado de pantalla: fecha + acción opcional */
+.top-der { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top-der .btn { width: auto; padding: 0 22px; flex-shrink: 0; }
+
+/* Acciones de cada resultado de búsqueda: en fila, no apiladas */
+.res-lista li > .botones { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.res-lista li > .botones .btn2 { width: auto; white-space: nowrap; }

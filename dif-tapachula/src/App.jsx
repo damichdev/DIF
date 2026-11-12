@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { api } from './api.js'
 import Login from './views/Login.jsx'
 import Layout from './components/Layout.jsx'
 import RegistrarPaciente from './views/RegistrarPaciente.jsx'
 import AgendarCitas from './views/AgendarCitas.jsx'
 import SignosVitales from './views/SignosVitales.jsx'
+import { useRecepcion } from './recepcion/useRecepcion.js'
 import BusquedaPacientes from './views/BusquedaPacientes.jsx'
 import ExpedienteClinico from './views/ExpedienteClinico.jsx'
 import ConsultaMedica from './views/ConsultaMedica.jsx'
@@ -21,29 +23,29 @@ const VISTAS = {
   receta: GenerarReceta,
 }
 
-// shortcut: usuarios de prueba en el frontend, sin seguridad real; pasar al login del Medico-Service cuando el backend esté conectado
-const USUARIOS = [
-  { correo: 'recepcion@dif.gob.mx', pass: 'recepcion123', rol: 'R' },
-  { correo: 'medico@dif.gob.mx', pass: 'medico123', rol: 'M' },
-  { correo: 'enfermera@dif.gob.mx', pass: 'enfermera123', rol: 'E' },
-]
-
 // Pantalla con la que abre cada rol
 const INICIO = { R: 'registrar', M: 'busqueda', E: 'signos' }
 
-export default function App(){
-  const [sesion, setSesion] = useState(null)
-  const [vista, setVista] = useState('')
+// La sesión sobrevive a recargar la página, pero no a cerrar la pestaña
+function leerSesion(){
+  try { return JSON.parse(sessionStorage.getItem('sesion')) } catch { return null }
+}
 
-  // Devuelve un mensaje de error, o nada si entró
-  function entrar(datos){
-    const u = USUARIOS.find((x) => x.correo === datos.correo.trim().toLowerCase() && x.pass === datos.pass)
-    if(!u) return 'Correo o contraseña incorrectos.'
-    setSesion({ correo: u.correo, rol: u.rol })
+export default function App(){
+  const [sesion, setSesion] = useState(leerSesion)
+  const [vista, setVista] = useState(() => (leerSesion() ? INICIO[leerSesion().rol] : ''))
+  const rec = useRecepcion() // paciente y cita en mano entre pantallas
+
+  // Lanza Error con el mensaje del backend si las credenciales no valen
+  async function entrar(correo, contrasena){
+    const u = await api('/api/auth/login', 'POST', { correo, contrasena })
+    sessionStorage.setItem('sesion', JSON.stringify(u))
+    setSesion(u)
     setVista(INICIO[u.rol])
   }
 
   function salir(){
+    sessionStorage.removeItem('sesion')
     setSesion(null)
     setVista('')
   }
@@ -58,7 +60,7 @@ export default function App(){
   return (
     <Layout sesion={sesion} vista={vista} onIr={setVista} onSalir={salir}>
       {Vista ? (
-        <Vista />
+        <Vista rec={rec} onIr={setVista} />
       ) : (
         <div className="cont">
           <h1>{vista}</h1>

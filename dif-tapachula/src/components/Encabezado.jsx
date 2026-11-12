@@ -5,7 +5,7 @@ const hoy = new Date().toLocaleDateString('es-MX', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
 })
 
-export default function Encabezado({ icono, area, titulo, sub }) {
+export default function Encabezado({ icono, area, titulo, sub, accion }) {
   return (
     <header className="top">
       <div className="top-tit">
@@ -16,10 +16,13 @@ export default function Encabezado({ icono, area, titulo, sub }) {
           <p className="sub">{sub}</p>
         </div>
       </div>
-      <span className="chip-fecha">
-        <Icono nombre="calendario" tam={15} />
-        {hoy}
-      </span>
+      <div className="top-der">
+        <span className="chip-fecha">
+          <Icono nombre="calendario" tam={15} />
+          {hoy}
+        </span>
+        {accion}
+      </div>
     </header>
   )
 }

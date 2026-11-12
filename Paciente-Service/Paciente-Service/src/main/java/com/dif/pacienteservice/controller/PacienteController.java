@@ -1,5 +1,6 @@
 package com.dif.pacienteservice.controller;
 
+import com.dif.pacienteservice.dto.CatalogoItemDTO;
 import com.dif.pacienteservice.dto.PacienteRequestDTO;
 import com.dif.pacienteservice.dto.PacienteResponseDTO;
 import com.dif.pacienteservice.service.IPacienteService;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pacientes")
@@ -26,6 +28,16 @@ public class PacienteController {
     @GetMapping("/{id}")
     public ResponseEntity<PacienteResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(pacienteService.obtenerPorId(id));
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<PacienteResponseDTO>> buscar(@RequestParam String q) {
+        return ResponseEntity.ok(pacienteService.buscar(q));
+    }
+
+    @GetMapping("/catalogos")
+    public ResponseEntity<Map<String, List<CatalogoItemDTO>>> catalogos() {
+        return ResponseEntity.ok(pacienteService.catalogos());
     }
 
     @GetMapping("/curp/{curp}")
