@@ -1,0 +1,17 @@
+# Compilados de Maven (se regeneran con mvnw)
+target/
+
+# IDE y sistema
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs y temporales
+*.log
+HELP.md
+
+# Frontend (dif-tapachula tiene su propio .gitignore)
+node_modules/
+dist/
