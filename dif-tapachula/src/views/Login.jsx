@@ -12,7 +12,8 @@ export default function Login({ onEntrar }) {
             setError('Escribe tu correo y contraseña.')
             return
         }
-        onEntrar({ rol, correo })
+        const fallo = onEntrar({ rol, correo, pass })
+        if (fallo) setError(fallo)
     }
 
     return (
